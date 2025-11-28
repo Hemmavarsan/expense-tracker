@@ -3,8 +3,9 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import json
 
-st.set_page_config(page_title="Expense Tracker", layout="centered")
+st.set_page_config(page_title="Expense Tracker (Priyadharshini)", layout="centered")
 st.title("Expense Tracker (Priyadharshini)")
 st.write("Track and record your daily expenses using this form.")
 
@@ -12,13 +13,13 @@ st.write("Track and record your daily expenses using this form.")
 scope = ["https://spreadsheets.google.com/feeds",
          "https://www.googleapis.com/auth/drive"]
 
-# Local JSON credentials
-creds = ServiceAccountCredentials.from_json_keyfile_name("expense-tracker.json", scope)
+# Use Streamlit secrets instead of local JSON
+creds_dict = json.loads(st.secrets["GCP_SERVICE_ACCOUNT"])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-
 sheet = client.open("ExpenseTracker").sheet1
 
-# Expense Form
+# Expense Form 
 with st.form("expense_form", clear_on_submit=True):
     expense_name = st.text_input("Expense Title / Name")
     amount = st.number_input("Amount (₹)", min_value=0.0, format="%.2f", value=None)
@@ -43,18 +44,15 @@ if submit:
     else:
         st.error("Please fill all required fields properly.")
 
-# Fetch Data and Display Totals
+# Fetch Data and Display Totals 
 data = sheet.get_all_records()
 
 if data:
     df = pd.DataFrame(data)
-
     df.columns = df.columns.str.strip()
     df.columns = df.columns.str.title()
-
     df["Amount"] = pd.to_numeric(df["Amount"], errors="coerce")
 
-    # Total and category summaries
     total_spent = df["Amount"].sum()
     category_totals = df.groupby("Category")["Amount"].sum().reset_index()
 
